@@ -1,0 +1,112 @@
+--- a/3rdparty/lzma/C/AesOpt.c
++++ b/3rdparty/lzma/C/AesOpt.c
+@@ -576,7 +576,7 @@
+ 
+ #if defined(__clang__) || defined(__GNUC__)
+   #ifdef MY_CPU_ARM64
+-    #define ATTRIB_AES __attribute__((__target__("+crypto")))
++    #define ATTRIB_AES __attribute__((__target__("+crypto,aes")))
+   #else
+     #define ATTRIB_AES __attribute__((__target__("fpu=crypto-neon-fp-armv8")))
+   #endif
+--- a/3rdparty/lzma/C/Sha256Opt.c
++++ b/3rdparty/lzma/C/Sha256Opt.c
+@@ -224,7 +224,7 @@
+ 
+ #if defined(__clang__) || defined(__GNUC__)
+   #ifdef MY_CPU_ARM64
+-    #define ATTRIB_SHA __attribute__((__target__("+crypto")))
++    #define ATTRIB_SHA __attribute__((__target__("+crypto,sha2")))
+   #else
+     #define ATTRIB_SHA __attribute__((__target__("fpu=crypto-neon-fp-armv8")))
+   #endif
+--- a/makefile
++++ b/makefile
+@@ -1047,7 +1047,9 @@
+ else
+ NEW_GIT_VERSION := unknown
+ endif
+-ifeq ($(NEW_GIT_VERSION),)
++ifneq ($(CUSTOM_VCS_REVISION),)
++NEW_GIT_VERSION := $(CUSTOM_VCS_REVISION)
++else ifeq ($(NEW_GIT_VERSION),)
+ NEW_GIT_VERSION := unknown
+ endif
+ 
+--- a/scripts/src/tools.lua
++++ b/scripts/src/tools.lua
+@@ -766,74 +766,3 @@
+ 
+ 		strip()
+ end
+-
+---------------------------------------------------
+--- testkeys
+---------------------------------------------------
+-
+-if (_OPTIONS["osd"] == "sdl") then
+-	project("testkeys")
+-	uuid ("b3f5a5b8-3203-11e9-93e4-670b4f4e359d")
+-	kind "ConsoleApp"
+-
+-	flags {
+-		"Symbols", -- always include minimum symbols for executables
+-	}
+-
+-	if _OPTIONS["SEPARATE_BIN"]~="1" then
+-		targetdir(MAME_DIR)
+-	end
+-
+-	links {
+-		"utils",
+-		"ocore_" .. _OPTIONS["osd"],
+-		ext_lib("utf8proc"),
+-	}
+-
+-	if _OPTIONS["targetos"]=="windows" then
+-		if _OPTIONS["USE_LIBSDL"]~="1" then
+-			configuration { "mingw*"}
+-				links {
+-					"SDL2main",
+-					"SDL2",
+-				}
+-			configuration { "vs*" }
+-				links {
+-					"SDL2",
+-					"imm32",
+-					"version",
+-				}
+-			configuration { }
+-		else
+-			local str = backtick(sdlconfigcmd() .. " --libs | sed 's/ -lSDLmain//'")
+-			addlibfromstring(str)
+-			addoptionsfromstring(str)
+-		end
+-		configuration { "x32", "vs*" }
+-			libdirs {
+-				path.join(_OPTIONS["SDL_INSTALL_ROOT"],"lib","x86")
+-			}
+-		configuration { "x64", "vs*" }
+-			libdirs {
+-				path.join(_OPTIONS["SDL_INSTALL_ROOT"],"lib","x64")
+-			}
+-	end
+-
+-	dofile("osd/sdl_cfg.lua")
+-
+-	includedirs {
+-		MAME_DIR .. "src/osd",
+-		MAME_DIR .. "src/lib/util",
+-	}
+-
+-	files {
+-		MAME_DIR .. "src/tools/testkeys.cpp",
+-	}
+-
+-	configuration { "mingw*" or "vs*" }
+-		targetextension ".exe"
+-
+-	configuration { }
+-
+-	strip()
+-end
